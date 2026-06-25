@@ -118,10 +118,45 @@
         textarea.comment { width: 100%; border: 2px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 0.9rem; resize: vertical; min-height: 70px; }
         .project-summary-card { grid-column: 1 / -1; background: white; border-radius: 16px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 820px; margin: 0 auto; }
         @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } .sidebar, .eval-rail { position: static; } }
+
+        /* === admin / test panel === */
+        .admin-fab { position: fixed; right: 16px; bottom: 16px; z-index: 9999; width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--dark); color: white; font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0.55; transition: opacity .2s; }
+        .admin-fab:hover { opacity: 1; }
+        .admin-panel { position: fixed; right: 16px; bottom: 74px; z-index: 9999; width: 320px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+        .admin-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .admin-x { border: none; background: none; font-size: 1.2rem; cursor: pointer; color: var(--gray); }
+        .admin-label { display: block; font-size: 0.78rem; color: var(--gray); margin: 10px 0 4px; }
+        .admin-input { width: 100%; padding: 8px 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 0.82rem; margin-bottom: 4px; }
+        .admin-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .admin-actions .btn { flex: 1; padding: 9px; font-size: 0.82rem; }
+        .admin-log { margin-top: 10px; font-size: 0.76rem; color: var(--gray); white-space: pre-wrap; max-height: 120px; overflow-y: auto; background: var(--light-gray); border-radius: 6px; padding: 8px; min-height: 18px; }
     </style>
 </head>
 <body>
     <div id="app" v-cloak>
+        <!-- ===== ADMIN / TEST PANEL (toggle with the gear, or ?admin=1) ===== -->
+        <button class="admin-fab" @click="showAdmin = !showAdmin" title="Admin / test panel">&#9881;</button>
+        <div v-if="showAdmin" class="admin-panel">
+            <div class="admin-row">
+                <strong>Admin &middot; Test Tools</strong>
+                <button class="admin-x" @click="showAdmin=false">&times;</button>
+            </div>
+            <label class="admin-label">Google Sheets webhook URL</label>
+            <input class="admin-input" v-model="webhookUrl" placeholder="https://script.google.com/.../exec">
+            <div class="admin-row" style="margin-top:8px;">
+                <select class="admin-input" style="margin:0; flex:1;" v-model="adminDomain">
+                    <option v-for="d in availableDomains" :key="d" :value="d">{{ d }}</option>
+                </select>
+            </div>
+            <div class="admin-actions">
+                <button class="btn btn-primary" :disabled="autoTesting" @click="runAutoTest">
+                    {{ autoTesting ? 'Running…' : 'Auto-run survey (random)' }}
+                </button>
+                <button class="btn btn-secondary" @click="pingWebhook">Ping webhook</button>
+            </div>
+            <div class="admin-log">{{ adminLog }}</div>
+        </div>
+
         <!-- ===== HEADER ===== -->
         <div class="header">
             <div class="header-content">
@@ -478,8 +513,14 @@
         new Vue({
             el: '#app',
             data: {
-                // ===== CONFIG: replace before deploying =====
-                webhookUrl: 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL',
+                // ===== CONFIG: Google Apps Script web app URL (data sink) =====
+                webhookUrl: 'https://script.google.com/macros/s/AKfycbwFmoqMMDyzlflArdIzmXi6jr9MqNcTmErN79z6TT1nWWXPnrTmFyInwbtGZI6gs0M3Lw/exec',
+
+                // admin / testing helpers
+                showAdmin: false,
+                autoTesting: false,
+                adminDomain: 'Interior Design',
+                adminLog: '',
 
                 // participant / recruitment
                 participantId: '', studyId: '', sessionId: '',
@@ -671,6 +712,88 @@
                     this.sessionId = q.get('SESSION_ID') || q.get('session_id') || '';
                     const d = q.get('domain');
                     if (d && this.availableDomains.includes(d)) this.participantDomain = d;
+                    if (q.get('admin') === '1' || q.has('admin')) this.showAdmin = true;
+                },
+
+                // ===== ADMIN: ping the webhook with a tiny test payload =====
+                async pingWebhook() {
+                    if (!this.webhookUrl) { this.adminLog = 'No webhook URL set.'; return; }
+                    this.adminLog = 'Pinging webhook…';
+                    try {
+                        await fetch(this.webhookUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ ping: true, sentAt: new Date().toISOString() })
+                        });
+                        this.adminLog = 'Ping sent (no-cors: response is opaque). Check the sheet for a "ping" row.';
+                    } catch (e) {
+                        this.adminLog = 'Ping failed: ' + e.message;
+                    }
+                },
+
+                // ===== ADMIN: auto-run the whole survey with random answers =====
+                runAutoTest() {
+                    if (this.autoTesting) return;
+                    this.autoTesting = true;
+                    this.adminLog = 'Auto-test started for "' + this.adminDomain + '"…';
+                    const rnd = (n) => Math.floor(Math.random() * n) + 1;      // 1..n
+                    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+                    const delay = 280; // ms between steps so you can watch it move
+
+                    // 1) fill intro
+                    this.participantId = this.participantId || ('TEST_' + Math.floor(Math.random()*1e6));
+                    this.experience = pick(['0-2','3-5','6-10','11-15','16+']);
+                    this.participantDomain = this.adminDomain;
+                    this.consent = true;
+                    this.goToCognitiveIntro();
+
+                    const self = this;
+                    setTimeout(function step2() {
+                        self.startSurvey();
+                        loopProjects();
+                    }, delay);
+
+                    function loopProjects() {
+                        // answer every phase of the current project, then the summary, then next project
+                        function answerPhase() {
+                            if (self.stage !== 'survey') return;
+                            // random answers in the rail
+                            self.currentResponse.authenticity = rnd(7);
+                            const states = ['Ambiguity','Vagueness','Uncertainty','Tacit'];
+                            const k = rnd(states.length); // pick 1..4 states
+                            const shuffled = states.slice().sort(() => Math.random() - 0.5).slice(0, k);
+                            self.currentResponse.cognitive = shuffled;
+                            self.adminLog = 'Project ' + (self.projectIndex+1) + '/' + self.domainProjects.length +
+                                            ' · Phase ' + (self.currentPhaseIndex+1) + '/' + self.selectedProject.phases.length;
+                            setTimeout(() => { self.advance(); afterAdvance(); }, delay);
+                        }
+                        function afterAdvance() {
+                            if (self.stage === 'survey') {
+                                answerPhase();                      // next phase
+                            } else if (self.stage === 'projectSummary') {
+                                setTimeout(fillSummary, delay);     // project done -> summary
+                            }
+                        }
+                        function fillSummary() {
+                            self.projectResponse.overallAuthenticity = rnd(7);
+                            self.projectResponse.coherence = rnd(7);
+                            self.projectResponse.comment = 'auto-test comment';
+                            self.adminLog = 'Project ' + (self.projectIndex+1) + ' summary filled.';
+                            setTimeout(() => {
+                                self.finishProject();
+                                if (self.stage === 'survey') {
+                                    answerPhase();                  // moved to next project
+                                } else if (self.stage === 'complete') {
+                                    self.autoTesting = false;
+                                    self.adminLog = 'Auto-test complete. Submitted ' +
+                                        self.domainProjects.length + ' projects / ' +
+                                        self.totalPhaseCount + ' phases. submitState=' + self.submitState +
+                                        '. Code=' + self.completionCode;
+                                }
+                            }, delay);
+                        }
+                        answerPhase();
+                    }
                 }
             },
             mounted() { this.captureUrlParams(); }
