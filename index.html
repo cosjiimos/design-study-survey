@@ -510,10 +510,10 @@
                 <div class="requirements">
                     <h3>What You'll Do:</h3>
                     <ul>
-                        <li>Evaluate 10 design process phases from real projects</li>
+                        <li>Evaluate ALL design process phases from projects in your domain</li>
                         <li>Rate the authenticity of each designer's thinking process</li>
                         <li>Identify cognitive states present in their work</li>
-                        <li>Estimated time: 20-30 minutes</li>
+                        <li>Estimated time: 45-60 minutes</li>
                     </ul>
                 </div>
 
@@ -601,7 +601,7 @@
                 <!-- Left Panel: Design Process Content -->
                 <div class="content-panel">
                     <div class="section-title">
-                        Design Phase {{ currentPage }} of {{ selectedPhases.length }}
+                        {{ participantDomain }} - Phase {{ currentPage }} of {{ selectedPhases.length }}
                     </div>
 
                     <div class="phase-header">
@@ -38558,7 +38558,6 @@
                 startTime: null,
 
                 // Configuration
-                phasesPerSurvey: 10,
                 webhookUrl: 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL' // Will be replaced
             },
             computed: {
@@ -38609,7 +38608,7 @@
                     // Filter projects by participant's domain
                     const domainProjects = this.allProjects.filter(p => p.domain === this.participantDomain);
 
-                    // Flatten all phases from domain projects
+                    // Flatten ALL phases from domain projects - evaluate everything
                     const allPhases = [];
                     domainProjects.forEach(project => {
                         if (project.phases && Array.isArray(project.phases)) {
@@ -38630,9 +38629,9 @@
                         }
                     });
 
-                    // Randomly select phases for evaluation
-                    const shuffled = allPhases.sort(() => 0.5 - Math.random());
-                    this.selectedPhases = shuffled.slice(0, Math.min(this.phasesPerSurvey, shuffled.length));
+                    // Use ALL phases from the domain - no random selection
+                    // Shuffle to randomize order but include everything
+                    this.selectedPhases = allPhases.sort(() => 0.5 - Math.random());
                 },
 
                 initializeResponses() {
@@ -38668,7 +38667,9 @@
                         startTime: this.startTime,
                         endTime: Date.now(),
                         duration: Math.round((Date.now() - this.startTime) / 1000),
+                        totalEvaluations: this.selectedPhases.length,
                         evaluations: this.selectedPhases.map((phase, index) => ({
+                            evaluationIndex: index + 1,
                             phaseId: phase.phase_number,
                             projectName: phase.project_name,
                             phaseName: phase.phase_name,
