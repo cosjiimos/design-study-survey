@@ -27,7 +27,7 @@
         .meta-chip-progress .meta-value { color: white; }
 
         /* === complete_viewer base styles === */
-        .main-container { max-width: 1600px; margin: 30px auto; padding: 0 30px; display: grid; grid-template-columns: 320px 1fr 440px; gap: 28px; align-items: start; }
+        .main-container { max-width: 1680px; margin: 30px auto; padding: 0 30px; display: grid; grid-template-columns: 300px 1fr 560px; gap: 28px; align-items: start; }
         .sidebar { position: sticky; top: 20px; height: fit-content; padding: 16px 16px 4px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 18px; position: relative; }
         /* the survey rail sits in its own tinted, bordered zone, separated by a divider */
         .eval-rail { position: sticky; top: 20px; height: fit-content; padding: 18px 18px 6px; background: linear-gradient(180deg, #6d5efc, #4f46e5); border: 2px solid #4338ca; border-radius: 18px; box-shadow: 0 12px 34px rgba(79,70,229,0.40); position: relative; }
@@ -456,8 +456,20 @@
                     <h3>Your Evaluation</h3>
                     <div class="eval-sub">Phase {{ currentPhaseIndex + 1 }}: {{ currentPhase.phase_name }}</div>
 
-                    <!-- ===== GROUP A: Realness & Human-likeness ===== -->
-                    <div class="group-header">A · Realness &amp; Human-likeness</div>
+                    <!-- ===== GROUP A: Cognitive States ===== -->
+                    <div class="group-header">A · Cognitive States</div>
+
+                    <div class="eval-block">
+                        <label class="q">Which cognitive states are present?</label>
+                        <div class="hint">Select all that apply.</div>
+                        <label v-for="c in cognitiveOptions" :key="c.key" :class="['cog-check', {checked: currentResponse.cognitive.includes(c.key)}]">
+                            <input type="checkbox" :value="c.key" v-model="currentResponse.cognitive">
+                            <span><span class="cc-title">{{ c.label }}</span><br><span class="cc-desc">{{ c.desc }}</span></span>
+                        </label>
+                    </div>
+
+                    <!-- ===== GROUP B: Realness & Human-likeness ===== -->
+                    <div class="group-header">B · Realness &amp; Human-likeness</div>
 
                     <div class="eval-block">
                         <label class="q">How authentic does this design process feel?</label>
@@ -477,22 +489,8 @@
                         <div class="rating-labels"><span>Not believable</span><span>Very believable</span></div>
                     </div>
 
-                    <div class="eval-block">
-                        <label class="q">Who do you think produced this process?</label>
-                        <div class="hint">Your best guess.</div>
-                        <div class="choice-scale">
-                            <button :class="{selected: currentResponse.humanVsAI==='human'}" @click="currentResponse.humanVsAI='human'">🧑 A human designer</button>
-                            <button :class="{selected: currentResponse.humanVsAI==='ai'}" @click="currentResponse.humanVsAI='ai'">🤖 An AI system</button>
-                        </div>
-                        <div class="hint" style="margin-top:12px;">How confident are you in that guess?</div>
-                        <div class="rating-scale">
-                            <button v-for="n in 7" :key="n" :class="{selected: currentResponse.b2Confidence===n}" @click="currentResponse.b2Confidence=n">{{ n }}</button>
-                        </div>
-                        <div class="rating-labels"><span>Not confident</span><span>Very confident</span></div>
-                    </div>
-
-                    <!-- ===== GROUP B: Process Quality ===== -->
-                    <div class="group-header">B · Process Quality</div>
+                    <!-- ===== GROUP C: Process Quality ===== -->
+                    <div class="group-header">C · Process Quality</div>
 
                     <div class="eval-block">
                         <label class="q">Is each decision grounded in the brief and earlier phases?</label>
@@ -537,18 +535,6 @@
                             <button v-for="n in 7" :key="n" :class="{selected: currentResponse.stepNecessity===n}" @click="currentResponse.stepNecessity=n">{{ n }}</button>
                         </div>
                         <div class="rating-labels"><span>Unnecessary</span><span>Necessary</span></div>
-                    </div>
-
-                    <!-- ===== GROUP C: Cognitive States ===== -->
-                    <div class="group-header">C · Cognitive States</div>
-
-                    <div class="eval-block">
-                        <label class="q">Which cognitive states are present?</label>
-                        <div class="hint">Select all that apply.</div>
-                        <label v-for="c in cognitiveOptions" :key="c.key" :class="['cog-check', {checked: currentResponse.cognitive.includes(c.key)}]">
-                            <input type="checkbox" :value="c.key" v-model="currentResponse.cognitive">
-                            <span><span class="cc-title">{{ c.label }}</span><br><span class="cc-desc">{{ c.desc }}</span></span>
-                        </label>
                     </div>
 
                     <!-- ===== GROUP D: Your Confidence ===== -->
@@ -731,7 +717,6 @@
                     return ph
                         && ph.authenticity !== null
                         && ph.believability !== null
-                        && ph.humanVsAI !== null && ph.b2Confidence !== null
                         && ph.faithfulness !== null && ph.planQuality !== null && ph.reasoning !== null
                         && ph.plausibility !== null && ph.stepNecessity !== null
                         && ph.confidence !== null && ph.infoSufficiency !== null
@@ -754,7 +739,7 @@
                         comment: '',
                         phases: p.phases.map(() => ({
                             authenticity: null, cognitive: [],
-                            believability: null, humanVsAI: null, b2Confidence: null,
+                            believability: null,
                             faithfulness: null, planQuality: null, reasoning: null, plausibility: null, stepNecessity: null,
                             confidence: null, infoSufficiency: null
                         }))
@@ -828,8 +813,6 @@
                                 authenticityRating: this.responses[pi].phases[hi].authenticity,
                                 identifiedStates: this.responses[pi].phases[hi].cognitive,
                                 believability: this.responses[pi].phases[hi].believability,
-                                humanVsAI: this.responses[pi].phases[hi].humanVsAI,
-                                humanVsAIConfidence: this.responses[pi].phases[hi].b2Confidence,
                                 faithfulness: this.responses[pi].phases[hi].faithfulness,
                                 planQuality: this.responses[pi].phases[hi].planQuality,
                                 reasoning: this.responses[pi].phases[hi].reasoning,
@@ -913,8 +896,6 @@
                             // random answers in the rail
                             self.currentResponse.authenticity = rnd(7);
                             self.currentResponse.believability = rnd(7);
-                            self.currentResponse.humanVsAI = Math.random() < 0.5 ? 'human' : 'ai';
-                            self.currentResponse.b2Confidence = rnd(7);
                             self.currentResponse.faithfulness = rnd(7);
                             self.currentResponse.planQuality = rnd(7);
                             self.currentResponse.reasoning = rnd(7);
