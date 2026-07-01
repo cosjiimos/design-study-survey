@@ -20,9 +20,15 @@
         .header-content { max-width: 1600px; margin: 0 auto; padding: 0 30px; }
 
         /* === complete_viewer base styles === */
-        .main-container { max-width: 1600px; margin: 30px auto; padding: 0 30px; display: grid; grid-template-columns: 320px 1fr 420px; gap: 24px; }
+        .main-container { max-width: 1600px; margin: 30px auto; padding: 0 30px; display: grid; grid-template-columns: 320px 1fr 440px; gap: 28px; align-items: start; }
         .sidebar { position: sticky; top: 20px; height: fit-content; }
-        .eval-rail { position: sticky; top: 20px; height: fit-content; }
+        /* the survey rail sits in its own tinted, bordered zone, separated by a divider */
+        .eval-rail { position: sticky; top: 20px; height: fit-content; padding: 16px 16px 4px; background: linear-gradient(180deg, #f3f1ff, #f9f8ff); border: 2px solid #ddd6fe; border-radius: 18px; box-shadow: 0 6px 24px rgba(79,70,229,0.10); position: relative; }
+        .eval-rail::before { content: ""; position: absolute; left: -16px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: repeating-linear-gradient(180deg, var(--primary-light) 0 8px, transparent 8px 16px); opacity: 0.5; }
+        /* zone captions distinguish "read" vs "answer" */
+        .zone-label { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em; padding: 8px 14px; border-radius: 10px; margin-bottom: 14px; display: block; }
+        .zone-label-read { color: var(--gray); background: var(--light-gray); border: 1px solid #e5e7eb; }
+        .zone-label-eval { color: var(--primary); background: #ede9fe; border: 1px solid var(--primary-light); text-align: center; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .select-input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; margin-bottom: 15px; background: white; cursor: pointer; transition: border-color 0.2s; }
         .select-input:focus { outline: none; border-color: var(--primary); }
@@ -95,7 +101,7 @@
 
         /* === evaluation rail (the survey — emphasized) === */
         @keyframes evalGlow { 0%,100% { box-shadow: 0 8px 28px rgba(79,70,229,0.18); } 50% { box-shadow: 0 8px 34px rgba(79,70,229,0.32); } }
-        .eval-card { background: linear-gradient(180deg, #ffffff, #f7f6ff); border-radius: 16px; padding: 26px; box-shadow: 0 8px 28px rgba(79,70,229,0.18); border: 2px solid var(--primary-light); border-top: 6px solid var(--primary); animation: evalGlow 3.5s ease-in-out infinite; }
+        .eval-card { background: #ffffff; border-radius: 14px; padding: 22px; box-shadow: 0 2px 10px rgba(17,24,39,0.06); border: 1px solid #e5e7eb; border-top: 5px solid var(--primary); }
         .eval-card > h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: var(--primary); letter-spacing: -0.01em; }
         .eval-card > h3::before { content: "\270D"; margin-right: 8px; }
         .eval-sub { display: inline-block; font-size: 0.82rem; font-weight: 600; color: var(--primary); background: #ede9fe; border: 1px solid var(--primary-light); padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
@@ -125,7 +131,7 @@
         .overall-progress { font-size: 0.8rem; color: var(--gray); margin-bottom: 14px; }
         textarea.comment { width: 100%; border: 2px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 0.9rem; resize: vertical; min-height: 70px; }
         .project-summary-card { grid-column: 1 / -1; background: white; border-radius: 16px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 820px; margin: 0 auto; }
-        @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } .sidebar, .eval-rail { position: static; } .eval-rail { order: -1; } }
+        @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } .sidebar, .eval-rail { position: static; } .eval-rail { order: -1; } .eval-rail::before { display: none; } }
 
         /* === admin / test panel === */
         .admin-fab { position: fixed; right: 16px; bottom: 16px; z-index: 9999; width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--dark); color: white; font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0.55; transition: opacity .2s; }
@@ -259,6 +265,7 @@
 
             <!-- SIDEBAR (project context + phase list) -->
             <div class="sidebar">
+                <div class="zone-label zone-label-read">📖 Design Process — read this</div>
                 <div class="card">
                     <h3 style="font-weight:600; margin-bottom:6px;">{{ selectedProject.project_name }}</h3>
                     <div style="font-size:0.85rem; color:var(--gray);">{{ selectedProject.domain }}</div>
@@ -428,6 +435,7 @@
 
             <!-- EVAL RAIL (right) -->
             <div class="eval-rail">
+                <div class="zone-label zone-label-eval">✍ Survey — answer here</div>
                 <div class="eval-card">
                     <div class="overall-progress">Phase {{ answeredCount }} / {{ totalPhaseCount }} evaluated overall</div>
                     <h3>Your Evaluation</h3>
