@@ -21,15 +21,14 @@
 
         /* === complete_viewer base styles === */
         .main-container { max-width: 1600px; margin: 30px auto; padding: 0 30px; display: grid; grid-template-columns: 320px 1fr 440px; gap: 28px; align-items: start; }
-        .sidebar { position: sticky; top: 20px; height: fit-content; padding: 16px 16px 4px; background: linear-gradient(180deg, #ecfeff, #f7feff); border: 2px solid #a5f3fc; border-radius: 18px; box-shadow: 0 6px 24px rgba(6,182,212,0.10); position: relative; }
-        .sidebar::after { content: ""; position: absolute; right: -18px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: repeating-linear-gradient(180deg, var(--secondary) 0 8px, transparent 8px 16px); opacity: 0.4; }
+        .sidebar { position: sticky; top: 20px; height: fit-content; padding: 16px 16px 4px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 18px; position: relative; }
         /* the survey rail sits in its own tinted, bordered zone, separated by a divider */
-        .eval-rail { position: sticky; top: 20px; height: fit-content; padding: 16px 16px 4px; background: linear-gradient(180deg, #f3f1ff, #f9f8ff); border: 2px solid #ddd6fe; border-radius: 18px; box-shadow: 0 6px 24px rgba(79,70,229,0.10); position: relative; }
-        .eval-rail::before { content: ""; position: absolute; left: -16px; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: repeating-linear-gradient(180deg, var(--primary-light) 0 8px, transparent 8px 16px); opacity: 0.5; }
+        .eval-rail { position: sticky; top: 20px; height: fit-content; padding: 18px 18px 6px; background: linear-gradient(180deg, #6d5efc, #4f46e5); border: 2px solid #4338ca; border-radius: 18px; box-shadow: 0 12px 34px rgba(79,70,229,0.40); position: relative; }
+        .eval-rail::before { content: ""; position: absolute; left: -18px; top: 6px; bottom: 6px; width: 4px; border-radius: 4px; background: var(--primary); opacity: 0.85; }
         /* zone captions distinguish "read" vs "answer" */
         .zone-label { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; display: block; text-align: center; }
-        .zone-label-read { color: var(--secondary); background: #cffafe; border: 1px solid #67e8f9; box-shadow: 0 2px 10px rgba(6,182,212,0.15); }
-        .zone-label-eval { color: var(--primary); background: #ede9fe; border: 1px solid var(--primary-light); box-shadow: 0 2px 10px rgba(79,70,229,0.15); }
+        .zone-label-read { color: var(--gray); background: #e5e7eb; border: 1px solid #d1d5db; }
+        .zone-label-eval { color: var(--primary); background: white; border: 1px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 1rem; letter-spacing: 0.03em; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .select-input { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; margin-bottom: 15px; background: white; cursor: pointer; transition: border-color 0.2s; }
         .select-input:focus { outline: none; border-color: var(--primary); }
@@ -132,7 +131,7 @@
         .overall-progress { font-size: 0.8rem; color: var(--gray); margin-bottom: 14px; }
         textarea.comment { width: 100%; border: 2px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 0.9rem; resize: vertical; min-height: 70px; }
         .project-summary-card { grid-column: 1 / -1; background: white; border-radius: 16px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 820px; margin: 0 auto; }
-        @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } .sidebar, .eval-rail { position: static; } .eval-rail { order: -1; } .eval-rail::before, .sidebar::after { display: none; } }
+        @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; } .sidebar, .eval-rail { position: static; } .eval-rail { order: -1; } .eval-rail::before { display: none; } }
 
         /* === admin / test panel === */
         .admin-fab { position: fixed; right: 16px; bottom: 16px; z-index: 9999; width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--dark); color: white; font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0.55; transition: opacity .2s; }
