@@ -99,8 +99,12 @@
         .eval-card > h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: var(--primary); letter-spacing: -0.01em; }
         .eval-card > h3::before { content: "\270D"; margin-right: 8px; }
         .eval-sub { display: inline-block; font-size: 0.82rem; font-weight: 600; color: var(--primary); background: #ede9fe; border: 1px solid var(--primary-light); padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
-        .eval-block { margin-bottom: 24px; }
-        .eval-block > label.q { display: block; font-weight: 700; font-size: 1.02rem; margin-bottom: 4px; color: var(--dark); }
+        /* each question gets its own numbered compartment */
+        .eval-card { counter-reset: qnum; }
+        .eval-block { margin-bottom: 18px; padding: 18px 18px 20px; background: white; border: 2px solid #ece9fb; border-radius: 12px; box-shadow: 0 1px 4px rgba(17,24,39,0.04); transition: border-color 0.2s, box-shadow 0.2s; }
+        .eval-block:hover { border-color: var(--primary-light); box-shadow: 0 4px 14px rgba(79,70,229,0.12); }
+        .eval-block > label.q { display: flex; align-items: flex-start; gap: 8px; font-weight: 700; font-size: 1.02rem; margin-bottom: 4px; color: var(--dark); }
+        .eval-block > label.q::before { counter-increment: qnum; content: "Q" counter(qnum); flex: 0 0 auto; min-width: 26px; height: 26px; line-height: 26px; text-align: center; background: var(--primary); color: white; font-size: 0.78rem; font-weight: 700; border-radius: 7px; }
         .eval-block .hint { font-size: 0.82rem; color: var(--gray); margin-bottom: 12px; }
         .rating-scale { display: flex; gap: 7px; }
         .rating-scale button { flex: 1; padding: 14px 0; border: 2px solid #e5e7eb; background: white; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 1.05rem; transition: all 0.15s; }
@@ -487,7 +491,7 @@
 
                 <div class="eval-warn">{{ summaryWarning }}</div>
                 <div class="button-group">
-                    <button class="btn btn-primary" @click="finishProject">{{ projectIndex < domainProjects.length - 1 ? 'Next Project &rarr;' : 'Finish &amp; Submit' }}</button>
+                    <button class="btn btn-primary" @click="finishProject">{{ projectIndex < domainProjects.length - 1 ? 'Next Project →' : 'Finish & Submit' }}</button>
                 </div>
             </div>
         </div>
@@ -585,7 +589,7 @@
                 },
                 advanceLabel() {
                     const last = this.currentPhaseIndex === this.selectedProject.phases.length - 1;
-                    return last ? 'Finish Project &rarr;' : 'Save &amp; Next Phase &rarr;';
+                    return last ? 'Finish Project →' : 'Save & Next Phase →';
                 },
                 completionCode() {
                     const codes = {
