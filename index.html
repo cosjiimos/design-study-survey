@@ -353,6 +353,13 @@
                     </div>
                 </div>
 
+                <div v-if="(currentPhase.phase_outcome && currentPhase.phase_outcome.deliverables_produced) || currentPhase.deliverables" class="info-section">
+                    <h3 class="section-title">Deliverables Produced in This Phase</h3>
+                    <div style="display:flex; flex-wrap:wrap;">
+                        <span v-for="item in ((currentPhase.phase_outcome && currentPhase.phase_outcome.deliverables_produced) || currentPhase.deliverables)" :key="item" class="deliverable-item">&#10003; {{ item }}</span>
+                    </div>
+                </div>
+
                 <div class="info-section">
                     <h3 class="section-title">Designer's Think-Aloud</h3>
                     <div class="think-aloud">"{{ currentPhase.ultra_realistic_think_aloud || (currentPhase.think_aloud && currentPhase.think_aloud.utterance) }}"</div>
