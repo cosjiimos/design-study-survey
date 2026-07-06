@@ -353,22 +353,6 @@
                     </div>
                 </div>
 
-                <div v-if="currentPhase.phase_outcome" class="phase-progress-card">
-                    <h3 style="font-weight:600; margin-bottom:15px; color:var(--dark);">Phase {{ currentPhaseIndex + 1 }} Progress &amp; Outcome</h3>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:20px; margin-bottom:15px;">
-                        <div><span style="font-size:0.85rem; color:var(--gray);">Completion Status</span><p style="font-weight:600; color:var(--success);">{{ currentPhase.phase_outcome.completion_status }}</p></div>
-                        <div><span style="font-size:0.85rem; color:var(--gray);">Progress</span><p style="font-weight:600; font-size:1.5rem; color:var(--primary);">{{ currentPhase.phase_outcome.progress_percentage }}%</p></div>
-                        <div><span style="font-size:0.85rem; color:var(--gray);">Iterations</span><p style="font-weight:600;">{{ currentPhase.phase_outcome.iteration_count }} rounds</p></div>
-                        <div><span style="font-size:0.85rem; color:var(--gray);">Approval Status</span><p style="font-weight:600; color:var(--success);">{{ currentPhase.phase_outcome.stakeholder_approval }}</p></div>
-                    </div>
-                    <div style="margin-top:20px;">
-                        <h4 style="font-size:1rem; font-weight:600; margin-bottom:10px;">Deliverables Produced in This Phase:</h4>
-                        <div style="display:flex; flex-wrap:wrap;">
-                            <span v-for="item in (currentPhase.phase_outcome.deliverables_produced || currentPhase.deliverables)" :key="item" class="deliverable-item">&#10003; {{ item }}</span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="info-section">
                     <h3 class="section-title">Designer's Think-Aloud</h3>
                     <div class="think-aloud">"{{ currentPhase.ultra_realistic_think_aloud || (currentPhase.think_aloud && currentPhase.think_aloud.utterance) }}"</div>
@@ -432,20 +416,6 @@
                     </div>
                 </div>
 
-                <div v-if="currentPhase.outcomes" class="info-section">
-                    <h3 class="section-title">Phase Metrics</h3>
-                    <div class="metrics-grid">
-                        <div class="metric-card"><div class="metric-value">{{ Math.round(currentPhase.outcomes.design_quality || 0) }}</div><div class="metric-label">Design Quality</div></div>
-                        <div class="metric-card"><div class="metric-value">{{ Math.round(currentPhase.outcomes.cognitive_load || 0) }}</div><div class="metric-label">Cognitive Load</div></div>
-                        <div class="metric-card"><div class="metric-value">{{ currentPhase.outcomes.satisfaction || 0 }}/5</div><div class="metric-label">Satisfaction</div></div>
-                        <div class="metric-card"><div class="metric-value">{{ currentPhase.outcomes.quality || 0 }}/5</div><div class="metric-label">Quality</div></div>
-                    </div>
-                </div>
-
-                <div v-if="currentPhase.phase_insights && currentPhase.phase_insights.length" class="info-section">
-                    <h3 class="section-title">Phase Insights</h3>
-                    <ul class="requirement-list"><li v-for="insight in currentPhase.phase_insights" :key="insight">{{ insight }}</li></ul>
-                </div>
             </div>
 
             <!-- EVAL RAIL (right) -->
