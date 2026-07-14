@@ -36,6 +36,10 @@
   .phase-count{ font-weight:800; color:var(--ink-soft); font-size:.9rem; }
 
   .info-row{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:stretch; }
+  .info-row.single{ grid-template-columns:1fr; }
+  .info-card.brief .goal-v{ font-size:1rem; line-height:1.5; color:var(--ink); font-weight:600; }
+  .designer-note{ margin-top:12px; font-size:.88rem; color:var(--ink-soft); line-height:1.5; padding-left:2px; }
+  .designer-note b{ color:var(--accent-dark); }
   .info-inner{ display:flex; flex-direction:column; gap:5px; }
   .page-grid{ display:grid; grid-template-columns:1fr 560px; gap:26px; align-items:start; }
   .page-left{ display:flex; flex-direction:column; gap:22px; min-width:0; }
@@ -308,28 +312,10 @@
     <div class="page-grid">
     <div class="page-left">
 
-      <div class="info-row">
+      <div class="info-row single">
         <div class="info-card brief" v-if="brief">
           <h3>📋 Project Brief</h3>
-          <div class="stat-row">
-            <div class="stat"><span class="stat-l">Client</span><span class="stat-v">{{ brief.client }}</span></div>
-            <div class="stat"><span class="stat-l">Budget</span><span class="stat-v">{{ brief.budget }}</span></div>
-            <div class="stat"><span class="stat-l">Timeline</span><span class="stat-v">{{ brief.timeline }}</span></div>
-          </div>
-          <div class="goal-box">
-            <span class="goal-l">🎯 Goal</span>
-            <span class="goal-v">{{ brief.project_goal }}</span>
-          </div>
-        </div>
-        <div class="info-card profile">
-          <h3>👤 Designer Profile</h3>
-          <div class="stat-row">
-            <div class="stat"><span class="stat-l">Experience</span><span class="stat-v">{{ dp.experience_years }} yrs</span></div>
-          </div>
-          <div class="goal-box light">
-            <span class="goal-l">Approach</span>
-            <span class="goal-v">{{ dp.design_approach }}</span>
-          </div>
+          <div class="goal-v">{{ brief.project_goal }}</div>
         </div>
       </div>
 
@@ -371,10 +357,7 @@
           </svg>
           <div class="name-plate">
             <div class="nm">{{ dp.name }}</div>
-            <div class="role">“{{ dp.personality_type || 'The Designer' }}”</div>
           </div>
-          <div class="traits"><span class="trait" v-for="t in (dp.traits||[]).slice(0,4)" :key="t">{{ t }}</span></div>
-          <div class="persona-meta"><span v-if="dp.primary_framework">{{ dp.primary_framework }} framework</span></div>
         </div>
         <div class="middle">
           <div class="phase-tag">
@@ -387,6 +370,10 @@
               <span class="lbl">produces:</span>
               <span class="chip" v-for="d in deliverables" :key="d">✓ {{ d }}</span>
             </div>
+          </div>
+          <div class="designer-note">
+            <b>{{ dp.experience_years }}-year {{ (dp.personality_type || 'designer').replace(/^The /,'') }}</b>
+            <span v-if="dp.design_approach"> — {{ dp.design_approach }}</span>
           </div>
         </div>
       </div>
