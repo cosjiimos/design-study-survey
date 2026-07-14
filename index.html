@@ -230,7 +230,10 @@
     <select class="admin-input" v-model="adminDomain">
       <option v-for="d in availableDomains" :key="d" :value="d">{{ d }}</option>
     </select>
-    <button class="btn btn-primary" style="width:100%" @click="pingWebhook">Ping webhook</button>
+    <button class="btn btn-primary" style="width:100%; margin-bottom:6px;" :disabled="autoTesting" @click="runAutoTest">
+      {{ autoTesting ? 'Auto-running…' : '⚡ Auto-run survey (random)' }}
+    </button>
+    <button class="btn btn-ghost" style="width:100%" @click="pingWebhook">Ping webhook</button>
     <div class="admin-log">{{ adminLog }}</div>
   </div>
 
@@ -538,7 +541,7 @@ new Vue({
   data:{
     // ===== deployment config =====
     webhookUrl: 'https://script.google.com/macros/s/AKfycbwdp43pr0ax2T_wuUN0gstwYQ9QCkokcNyqhHAfVzjo6Is1kQhfTyuDi6B_bobp2R1l2w/exec',
-    showAdmin:false, adminDomain:'Interior Design', adminLog:'',
+    showAdmin:false, adminDomain:'Interior Design', adminLog:'', autoTesting:false,
     participantId:'', studyId:'', sessionId:'',
     experience:'', participantDomain:'', consent:false,
     availableDomains:[
@@ -792,6 +795,53 @@ new Vue({
       fetch(this.webhookUrl, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ping:true})})
         .then(function(){ self.adminLog='Ping sent (no-cors: opaque). Check the sheet for a "ping" row.'; })
         .catch(function(e){ self.adminLog='Ping failed: '+e.message; });
+    },
+
+    // ===== ADMIN: auto-run the whole survey with random answers =====
+    runAutoTest(){
+      if(this.autoTesting) return;
+      var self=this;
+      var rnd=function(n){ return 1+Math.floor(Math.random()*n); };
+      var pick=function(arr){ return arr[Math.floor(Math.random()*arr.length)]; };
+      // 1) fill intro + start
+      this.participantId = this.participantId || ('TEST_'+Math.floor(Math.random()*1e6));
+      this.experience = pick(['0-2','3-5','6-10','11-15','16+']);
+      this.participantDomain = this.adminDomain;
+      this.consent = true;
+      this.autoTesting = true;
+      this.goToCognitiveIntro();
+      this.startSurvey();
+
+      // fill the current phase's response object at random for every question type
+      var fillPhase=function(){
+        var R=self.R;
+        self.questions.forEach(function(q){
+          if(q.type==='rating'){ self.$set(R, q.key, rnd(7)); }
+          else if(q.type==='single'){ var o=pick(self.optsFor(q)); if(o) self.$set(R, q.key, o.key); }
+          else if(q.type==='text'){ self.$set(R, q.key, 'auto-test note'); }
+          else if(q.type==='check'){
+            var states=['Ambiguity','Vagueness','Uncertainty','Tacit'];
+            var k=rnd(states.length);
+            self.$set(R, 'cognitive', states.slice().sort(function(){return Math.random()-0.5;}).slice(0,k));
+          }
+        });
+      };
+
+      var delay=140;
+      var step=function(){
+        if(self.stage!=='survey'){
+          // reached complete (or other) — stop
+          self.autoTesting=false;
+          self.adminLog='Auto-test complete. Submitted '+self.domainProjects.length+' projects / '+self.totalPhaseCount+' phases. Code='+self.completionCode+' state='+self.submitState;
+          return;
+        }
+        fillPhase();
+        self.adminLog='Project '+(self.projectIndex+1)+'/'+self.domainProjects.length+' · Phase '+(self.phaseIndex+1)+'/'+self.phases.length+' filled';
+        // jump to last question, then advance (advancePhase moves phase/project or submits)
+        self.qIndex = self.questions.length-1;
+        setTimeout(function(){ self.advancePhase(); setTimeout(step, delay); }, delay);
+      };
+      setTimeout(step, delay);
     }
   },
   mounted(){ this.captureUrlParams(); }
