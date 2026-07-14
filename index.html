@@ -38,8 +38,15 @@
   .info-row{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:stretch; }
   .info-row.single{ grid-template-columns:1fr; }
   .info-card.brief .goal-v{ font-size:1rem; line-height:1.5; color:var(--ink); font-weight:600; }
-  .designer-note{ margin-top:12px; font-size:.88rem; color:var(--ink-soft); line-height:1.5; padding-left:2px; }
-  .designer-note b{ color:var(--accent-dark); }
+  /* designer info under the character */
+  .persona-info{ margin-top:10px; text-align:center; }
+  .persona-info .pi-exp{ font-size:.9rem; font-weight:800; color:var(--ink); }
+  .persona-info .pi-approach{ font-size:.8rem; color:var(--ink-soft); line-height:1.45; margin-top:6px; }
+  .persona-info .pi-framework{ font-size:.76rem; color:var(--ink-soft); margin-top:8px; }
+  .persona-info .traits{ margin-top:8px; }
+  /* process details inline under the bubble */
+  .details-inline{ margin-top:16px; padding-top:14px; border-top:1.5px solid var(--line); }
+  .details-inline .col-title{ margin-bottom:2px; }
   .info-inner{ display:flex; flex-direction:column; gap:5px; }
   .page-grid{ display:grid; grid-template-columns:1fr 560px; gap:26px; align-items:start; }
   .page-left{ display:flex; flex-direction:column; gap:22px; min-width:0; }
@@ -357,6 +364,13 @@
           </svg>
           <div class="name-plate">
             <div class="nm">{{ dp.name }}</div>
+            <div class="role">“{{ dp.personality_type || 'The Designer' }}”</div>
+          </div>
+          <div class="persona-info">
+            <div class="pi-exp">{{ dp.experience_years }} years experience<span v-if="dp.expertise_level"> · {{ dp.expertise_level }}</span></div>
+            <div class="pi-approach" v-if="dp.design_approach">{{ dp.design_approach }}</div>
+            <div class="traits"><span class="trait" v-for="t in (dp.traits||[]).slice(0,4)" :key="t">{{ t }}</span></div>
+            <div class="pi-framework" v-if="dp.primary_framework">{{ dp.primary_framework }} framework</div>
           </div>
         </div>
         <div class="middle">
@@ -371,9 +385,42 @@
               <span class="chip" v-for="d in deliverables" :key="d">✓ {{ d }}</span>
             </div>
           </div>
-          <div class="designer-note">
-            <b>{{ dp.experience_years }}-year {{ (dp.personality_type || 'designer').replace(/^The /,'') }}</b>
-            <span v-if="dp.design_approach"> — {{ dp.design_approach }}</span>
+
+          <!-- PROCESS DETAILS: cards right under the bubble -->
+          <div class="details-inline">
+            <div class="col-title">Process details</div>
+            <div class="details-grid">
+              <div class="dcard" v-if="phase.cognitive_decision_step">
+                <h4>Cognitive Decision Step</h4>
+                <div class="line"><span class="k">Action:</span> <span class="v">{{ phase.cognitive_decision_step.action }}</span></div>
+                <div class="line"><span class="k">Artifact:</span> <span class="v">{{ phase.cognitive_decision_step.artifact }}</span></div>
+              </div>
+              <div class="dcard" v-if="phase.framework_approach">
+                <h4>Design Approach</h4>
+                <div class="line"><span class="k">Framework:</span> <span class="v">{{ phase.framework_approach }}</span></div>
+              </div>
+              <div class="dcard">
+                <h4>Requirements &amp; Deliverables</h4>
+                <div class="col2">
+                  <div>
+                    <div class="k">Requirements</div>
+                    <ul class="req-list"><li v-for="r in safeReqs" :key="r">{{ r }}</li></ul>
+                  </div>
+                  <div>
+                    <div class="k">Deliverables</div>
+                    <ul class="req-list"><li v-for="d in deliverables" :key="d">{{ d }}</li></ul>
+                  </div>
+                </div>
+              </div>
+              <div class="dcard" v-if="phase.ai_usage && phase.ai_usage.used && phase.ai_usage.tools && phase.ai_usage.tools.length">
+                <h4>AI Tool Usage</h4>
+                <div class="ai-tool" v-for="t in phase.ai_usage.tools" :key="t.tool">
+                  <div class="nm">{{ t.tool }}</div>
+                  <div class="meta">Purpose: {{ t.purpose }}</div>
+                  <div class="meta">Interaction: {{ t.interaction_type }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -433,43 +480,6 @@
         </div>
       </div>
     </div>
-    </div>
-
-    <!-- PROCESS DETAILS -->
-    <div class="details-strip">
-      <div class="col-title">Process details</div>
-      <div class="details-grid">
-        <div class="dcard" v-if="phase.cognitive_decision_step">
-          <h4>Cognitive Decision Step</h4>
-          <div class="line"><span class="k">Action:</span> <span class="v">{{ phase.cognitive_decision_step.action }}</span></div>
-          <div class="line"><span class="k">Artifact:</span> <span class="v">{{ phase.cognitive_decision_step.artifact }}</span></div>
-        </div>
-        <div class="dcard" v-if="phase.framework_approach">
-          <h4>Design Approach</h4>
-          <div class="line"><span class="k">Framework:</span> <span class="v">{{ phase.framework_approach }}</span></div>
-        </div>
-        <div class="dcard">
-          <h4>Requirements &amp; Deliverables</h4>
-          <div class="col2">
-            <div>
-              <div class="k">Requirements</div>
-              <ul class="req-list"><li v-for="r in safeReqs" :key="r">{{ r }}</li></ul>
-            </div>
-            <div>
-              <div class="k">Deliverables</div>
-              <ul class="req-list"><li v-for="d in deliverables" :key="d">{{ d }}</li></ul>
-            </div>
-          </div>
-        </div>
-        <div class="dcard" v-if="phase.ai_usage && phase.ai_usage.used && phase.ai_usage.tools && phase.ai_usage.tools.length">
-          <h4>AI Tool Usage</h4>
-          <div class="ai-tool" v-for="t in phase.ai_usage.tools" :key="t.tool">
-            <div class="nm">{{ t.tool }}</div>
-            <div class="meta">Purpose: {{ t.purpose }}</div>
-            <div class="meta">Interaction: {{ t.interaction_type }}</div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="footer">
