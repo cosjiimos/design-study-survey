@@ -755,6 +755,7 @@ new Vue({
         projects:this.domainProjects.map(function(p,pi){
           return {
             projectId:p.project_id, projectName:p.project_name,
+            designer:(p.designer_profile&&p.designer_profile.name)||'',
             phases:p.phases.map(function(ph,hi){
               var r=self.responses[pi+'-'+hi] || blankResponse();
               return {
