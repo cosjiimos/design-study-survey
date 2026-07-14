@@ -147,7 +147,7 @@
   .eval-block{ margin-bottom:16px; padding:16px; background:#fff; border:1px solid #ece9fb;
     border-radius:12px; box-shadow:0 1px 4px rgba(17,24,39,.04); }
   .eval-block > label.q{ display:flex; align-items:flex-start; gap:8px; font-weight:800; font-size:1.08rem; line-height:1.4; color:var(--ink); margin-bottom:5px; }
-  .eval-block > label.q::before{ counter-increment:qnum; content:"Q" counter(qnum); flex:0 0 auto;
+  .eval-block > label.q::before{ content:"Q" attr(data-qnum); flex:0 0 auto;
     min-width:26px; height:26px; line-height:26px; text-align:center; background:var(--accent); color:#fff;
     font-size:.76rem; font-weight:800; border-radius:7px; }
   .eval-block .hint{ font-size:.86rem; color:#5a6472; line-height:1.45; margin-bottom:11px; }
@@ -451,7 +451,7 @@
         <div class="group-header">{{ curQ.group }}</div>
 
         <div class="eval-block big" v-if="curQ.type==='check'">
-          <label class="q">{{ curQ.text }}</label>
+          <label class="q" :data-qnum="qIndex+1">{{ curQ.text }}</label>
           <div class="hint">{{ curQ.hint }}</div>
           <label v-for="c in cognitiveOptions" :key="c.key" :class="['cog-check', {checked: R.cognitive.includes(c.key)}]">
             <input type="checkbox" :value="c.key" v-model="R.cognitive">
@@ -460,7 +460,7 @@
         </div>
 
         <div class="eval-block big" v-else-if="curQ.type==='single'">
-          <label class="q">{{ curQ.text }}</label>
+          <label class="q" :data-qnum="qIndex+1">{{ curQ.text }}</label>
           <div class="hint">{{ curQ.hint }}</div>
           <label v-for="o in optsFor(curQ)" :key="o.key" :class="['cog-check', {checked: R[curQ.key]===o.key}]">
             <input type="radio" :checked="R[curQ.key]===o.key" @change="setSingle(curQ.key,o.key)">
@@ -469,13 +469,13 @@
         </div>
 
         <div class="eval-block big" v-else-if="curQ.type==='text'">
-          <label class="q">{{ curQ.text }}</label>
+          <label class="q" :data-qnum="qIndex+1">{{ curQ.text }}</label>
           <div class="hint">{{ curQ.hint }}</div>
           <textarea class="q-text" rows="4" v-model="R[curQ.key]" :placeholder="curQ.ph || ''"></textarea>
         </div>
 
         <div class="eval-block big" v-else-if="curQ.type==='rating'">
-          <label class="q">{{ curQ.text }}</label>
+          <label class="q" :data-qnum="qIndex+1">{{ curQ.text }}</label>
           <div class="hint">{{ curQ.hint }}</div>
           <div class="rating-scale big">
             <button v-for="n in 7" :key="n" :class="{selected:R[curQ.key]===n}" @click="setRating(curQ.key,n)">{{ n }}</button>
@@ -587,9 +587,9 @@ new Vue({
     ],
     baseQuestions:[
       {group:'A · Diagnose the block', type:'check', key:'cognitive',
-        text:'What kind of block (indeterminacy) is present? Select all that apply.', hint:'Judge only from what you saw — no label is shown to you.'},
+        text:'What kind of block (indeterminacy) is present? (Multiple selections allowed)', hint:'Check every block you see — you may select more than one. Judge only from what you saw; no label is shown to you.'},
       {group:'A · Diagnose the block', type:'single', key:'cognitivePrimary', opts:'primaryOptions',
-        text:'Which one is most prominent?', hint:'Pick the single dominant block (or Mixed / None).'},
+        text:'Which one is most prominent? (Choose exactly ONE)', hint:'Pick only one — the single most dominant block (or Mixed / None).'},
       {group:'A · Diagnose the block', type:'single', key:'awareness', opts:'awarenessOptions',
         text:'How aware was the designer of what they were stuck on?', hint:'Awareness of the block.'},
       {group:'A · Diagnose the block', type:'single', key:'intervention', opts:'interventionOptions',
