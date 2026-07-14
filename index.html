@@ -90,6 +90,13 @@
     background:var(--panel); border:1.5px solid var(--line2); border-radius:999px;
     padding:7px 14px; font-weight:800; font-size:.84rem; }
   .cog-dot{ width:11px; height:11px; border-radius:50%; }
+  .audio-status{ display:inline-flex; align-items:center; gap:8px; margin-left:6px; }
+  .audio-live{ color:var(--accent-dark); font-weight:800; animation:blink 1.2s steps(2) infinite; }
+  .audio-ok{ color:var(--tac); font-weight:800; }
+  .replay-btn{ font-family:'Nunito'; font-weight:800; font-size:.76rem; border:1.5px solid var(--line2);
+    background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
+  .replay-btn:hover:not(:disabled){ border-color:var(--accent); }
+  .replay-btn:disabled{ opacity:.5; cursor:not-allowed; }
   .bubble{ position:relative; background:#fff; border:2px solid var(--line2);
     border-radius:22px; padding:22px 26px; box-shadow:0 10px 30px rgba(43,43,51,.07); min-height:130px; }
   .bubble::before{ content:""; position:absolute; left:-16px; top:30px;
@@ -235,6 +242,29 @@
     </button>
     <button class="btn btn-ghost" style="width:100%" @click="pingWebhook">Ping webhook</button>
     <div class="admin-log">{{ adminLog }}</div>
+  </div>
+
+  <!-- ===== STAGE: AUDIO NOTICE ===== -->
+  <div v-if="stage==='audioNotice'" class="center-wrap">
+    <div class="intro-card" style="text-align:center;">
+      <div style="font-size:3rem; margin-bottom:8px;">🎧</div>
+      <h2>This Study Uses Audio</h2>
+      <p style="text-align:left;">Each design phase includes the designer <b>thinking out loud</b>. Their voice will be <b>played as audio</b> while the text appears on screen.</p>
+      <div class="requirements" style="text-align:left;">
+        <h3>Please note:</h3>
+        <ul>
+          <li><b>Use headphones or speakers</b> in a quiet environment.</li>
+          <li><b>Listen to the full think-aloud</b> in every phase — you cannot move to the next phase until the audio has finished playing.</li>
+          <li>You can replay the audio at any time with the 🔊 Replay button.</li>
+        </ul>
+      </div>
+      <p style="color:var(--gray);">Click the button below to test that audio works on your device.</p>
+      <div class="button-group" style="justify-content:center;">
+        <button class="btn btn-ghost" @click="testAudio" :disabled="audioTesting">{{ audioTesting ? '🔊 Playing…' : '🔊 Test audio' }}</button>
+        <button class="btn btn-primary" :disabled="!audioTested" @click="stage='intro'">I can hear it — Continue &rarr;</button>
+      </div>
+      <div v-if="!speechSupported" style="color:var(--danger); margin-top:12px;">Your browser does not support speech playback. Please use Chrome, Edge, or Safari.</div>
+    </div>
   </div>
 
   <!-- ===== STAGE: INTRO ===== -->
@@ -387,6 +417,11 @@
           <div class="phase-tag">
             <span class="cog-dot" style="background:var(--accent)"></span>
             {{ phase.phase_name }}
+            <span class="audio-status" v-if="speechSupported">
+              <span v-if="audioPlaying" class="audio-live">🔊 playing…</span>
+              <span v-else-if="audioDone" class="audio-ok">✓ audio done</span>
+              <button class="replay-btn" @click="speakCurrent" :disabled="audioPlaying">🔊 Replay</button>
+            </span>
           </div>
           <div class="bubble">
             <div class="say">{{ shown }}<span class="cursor" v-if="typing"></span></div>
@@ -549,10 +584,16 @@ new Vue({
       'Architecture','Interior Design','Fashion Design','Brand Design','Motion Graphics'
     ],
 
-    stage:'intro',          // intro | cognitive | survey | complete
+    stage:'audioNotice',    // audioNotice | intro | cognitive | survey | complete
     startTime:null,
     submitState:'idle',
     phaseWarning:'',
+
+    // ---- audio (TTS) ----
+    speechSupported: (typeof window!=='undefined' && 'speechSynthesis' in window),
+    audioTested:false, audioTesting:false,
+    audioPlaying:false, audioDone:false, _speechToken:0,
+    listened:{},            // respKey -> true once fully heard
 
     allProjects: (typeof v7Projects!=='undefined') ? v7Projects : [],
     domainProjects:[],
@@ -720,7 +761,11 @@ new Vue({
       if(!this.isQAnswered(this.qIndex)){ this.phaseWarning='Please answer this question before continuing.'; return; }
       this.phaseWarning='';
       if(this.qIndex < this.questions.length-1){ this.qIndex++; return; }
-      // last question of phase -> advance
+      // last question of phase -> gate on audio, then advance
+      if(this.speechSupported && !this.audioDone && !this.autoTesting){
+        this.phaseWarning='Please listen to the full think-aloud audio before moving on.';
+        return;
+      }
       this.advancePhase();
     },
     advancePhase(){
@@ -741,9 +786,62 @@ new Vue({
       var step=Math.max(12, Math.min(28, Math.round(txt.length/48)));
       this._timer=setInterval(function(){ i+=step; self.shown=txt.slice(0,i);
         if(i>=txt.length){ self.shown=txt; self.typing=false; clearInterval(self._timer); } },22);
+      this.speakCurrent();
+    },
+
+    // ---- text-to-speech ----
+    testAudio(){
+      if(!this.speechSupported){ this.audioTested=true; return; } // let them through; gate is off anyway
+      var self=this; this.audioTesting=true;
+      this.speak('This is an audio test. In the study, you will hear the designer thinking out loud like this.', function(){
+        self.audioTesting=false; self.audioTested=true;
+      });
+    },
+    speakCurrent(){
+      if(this.stage!=='survey' && this.stage!=='audioNotice'){ return; }
+      if(!this.speechSupported || this.autoTesting){ this.audioDone=true; return; }
+      var self=this, key=this.respKey;
+      this.audioDone = !!this.listened[key];   // already fully heard before -> gate stays open
+      this.speak(this.fullText, function(){ self.audioDone=true; self.$set(self.listened, key, true); });
+    },
+    speak(text, onEnd){
+      if(!this.speechSupported){ if(onEnd) onEnd(); return; }
+      var synth=window.speechSynthesis;
+      synth.cancel();
+      var token=++this._speechToken;
+      var self=this;
+      // chunk by sentence: long utterances can get cut off in some browsers
+      var parts=String(text).match(/[^.!?…]+[.!?…]+["']?|[^.!?…]+$/g) || [String(text)];
+      var idx=0;
+      this.audioPlaying=true;
+      // pick a stable English voice if available
+      var voices=synth.getVoices();
+      var voice=null;
+      for(var i=0;i<voices.length;i++){
+        var v=voices[i];
+        if(/en[-_]US/i.test(v.lang) && /Google|Samantha|Microsoft/i.test(v.name)){ voice=v; break; }
+      }
+      if(!voice){ for(var j=0;j<voices.length;j++){ if(/^en/i.test(voices[j].lang)){ voice=voices[j]; break; } } }
+      function next(){
+        if(token!==self._speechToken){ return; }           // superseded by a newer speak()
+        if(idx>=parts.length){ self.audioPlaying=false; if(onEnd) onEnd(); return; }
+        var u=new SpeechSynthesisUtterance(parts[idx++].trim());
+        if(voice) u.voice=voice;
+        u.rate=1.02; u.pitch=1.0;
+        u.onend=next;
+        u.onerror=function(){ next(); };                     // skip a bad chunk, keep going
+        synth.speak(u);
+      }
+      next();
+    },
+    stopSpeech(){
+      this._speechToken++;
+      if(this.speechSupported) window.speechSynthesis.cancel();
+      this.audioPlaying=false;
     },
     // ---- submit ----
     submitSurvey(){
+      this.stopSpeech();
       this.stage='complete'; this.submitState='sending';
       var self=this;
       var payload={
