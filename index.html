@@ -379,6 +379,10 @@
             <g class="breathe">
               <path d="M78 214 Q80 158 130 158 Q180 158 182 214 Z" :fill="skin.shirt"/>
               <path d="M118 160 Q130 172 142 160 L138 200 L122 200 Z" :fill="skin.shirtDark" opacity=".5"/>
+              <g v-if="personaGender==='female'">
+                <path d="M92 100 Q82 150 90 178 Q98 184 108 178 Q98 145 100 108 Z" :fill="skin.hair"/>
+                <path d="M168 100 Q178 150 170 178 Q162 184 152 178 Q162 145 160 108 Z" :fill="skin.hair"/>
+              </g>
               <rect x="120" y="140" width="20" height="22" rx="8" :fill="skin.face"/>
               <ellipse cx="130" cy="118" rx="42" ry="45" :fill="skin.face"/>
               <path d="M88 118 Q90 70 130 68 Q170 70 172 118 Q172 96 130 92 Q88 96 88 118Z" :fill="skin.hair"/>
@@ -686,6 +690,11 @@ new Vue({
     cogHex(){ return '#6d5efc'; },
     accentHex(){ return '#6d5efc'; },
     persona(){ return (this.dp.personality_type||'The Designer').toLowerCase(); },
+    personaGender(){
+      var n=(this.dp.name||'D'); var h=0;
+      for(var i=0;i<n.length;i++) h=(h*131+n.charCodeAt(i))>>>0;
+      return (h%2===0) ? 'female' : 'male';
+    },
     skin(){
       var palettes=[
         {face:'#f0c9a8',hair:'#3b2a20',shirt:'#8fb3d9',shirtDark:'#5f86b0',desk:'#e7dccb',deskTop:'#d6c7b0',line:'#8a6a52'},
@@ -807,7 +816,7 @@ new Vue({
         self.audioDone=true;
         if(ok){ self.$set(self.listened, key, true); }
         else { self.speechSupported=false; }   // engine died -> stop gating for the rest of the study
-      });
+      }, this.personaGender);
     },
     // Load voices (async in Chrome). cb(voices) once available or after timeout.
     _getVoices(cb){
@@ -818,7 +827,22 @@ new Vue({
       var t=setTimeout(function(){ if(!done){ done=true; cb(synth.getVoices()||[]); } }, 1200);
       synth.onvoiceschanged=function(){ if(!done){ done=true; clearTimeout(t); cb(synth.getVoices()||[]); } };
     },
-    speak(text, onEnd){
+    // Voice-name heuristics: the Web Speech API has no gender field, so match common voice names.
+    _pickVoice(voices, gender){
+      var en=voices.filter(function(v){ return /^en/i.test(v.lang); });
+      if(!en.length) en=voices;
+      var isFemale=function(n){ return /female|zira|aria|jenny|michelle|samantha|susan|victoria|karen|moira|tessa|fiona|serena|allison|ava|kate|hazel|libby|sonia|natasha|salli|joanna|kendra|kimberly|ivy/i.test(n); };
+      var isMale=function(n){ return (!/female/i.test(n) && /\bmale\b/i.test(n)) || /david|mark|\bguy\b|alex\b|daniel|fred|george|james|rishi|thomas|ryan|eric|christopher|matthew|joey|justin|brian|arthur|oliver/i.test(n); };
+      var want = (gender==='male') ? isMale : isFemale;
+      var avoid = (gender==='male') ? isFemale : isMale;
+      // 1) preferred: US English + wanted gender; 2) any English + wanted gender;
+      // 3) any English NOT of the opposite gender; 4) first English voice
+      for(var i=0;i<en.length;i++){ if(/en[-_]US/i.test(en[i].lang) && want(en[i].name)) return {voice:en[i], matched:true}; }
+      for(var j=0;j<en.length;j++){ if(want(en[j].name)) return {voice:en[j], matched:true}; }
+      for(var k=0;k<en.length;k++){ if(!avoid(en[k].name)) return {voice:en[k], matched:false}; }
+      return {voice:en[0]||null, matched:false};
+    },
+    speak(text, onEnd, gender){
       if(!this.speechSupported){ if(onEnd) onEnd(false); return; }
       var synth=window.speechSynthesis;
       var token=++this.speechToken;
@@ -831,12 +855,10 @@ new Vue({
 
       this._getVoices(function(voices){
         if(token!==self.speechToken) return;
-        var voice=null;
-        for(var i=0;i<voices.length;i++){
-          var v=voices[i];
-          if(/en[-_]US/i.test(v.lang) && /Google|Samantha|Microsoft|Zira|Aria|Jenny/i.test(v.name)){ voice=v; break; }
-        }
-        if(!voice){ for(var j=0;j<voices.length;j++){ if(/^en/i.test(voices[j].lang)){ voice=voices[j]; break; } } }
+        var picked=self._pickVoice(voices, gender||'female');
+        var voice=picked.voice;
+        // if no gender-matched voice exists, hint the gender with pitch instead
+        var pitch = picked.matched ? 1.0 : (gender==='male' ? 0.82 : 1.14);
 
         function next(){
           if(token!==self.speechToken){ return; }         // superseded
@@ -845,7 +867,7 @@ new Vue({
           self._utterances.push(u);                        // keep alive
           if(voice) u.voice=voice;
           u.lang=(voice&&voice.lang)||'en-US';
-          u.rate=1.0; u.pitch=1.0; u.volume=1.0;
+          u.rate=1.0; u.pitch=pitch; u.volume=1.0;
           u.onstart=function(){ anyStarted=true; };
           u.onend=next;
           u.onerror=function(){ next(); };                 // skip bad chunk
