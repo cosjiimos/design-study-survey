@@ -263,7 +263,7 @@
         <button class="btn btn-ghost" @click="testAudio" :disabled="audioTesting">{{ audioTesting ? '🔊 Playing…' : '🔊 Test audio' }}</button>
         <button class="btn btn-primary" :disabled="!audioTested" @click="stage='intro'">I can hear it — Continue &rarr;</button>
       </div>
-      <div v-if="!speechSupported" style="color:var(--danger); margin-top:12px;">Your browser does not support speech playback. Please use Chrome, Edge, or Safari.</div>
+      <div v-if="!speechSupported" style="color:var(--danger); margin-top:12px;">Audio could not be played on this device. You can still continue — think-alouds will be shown as text only.</div>
     </div>
   </div>
 
@@ -592,7 +592,7 @@ new Vue({
     // ---- audio (TTS) ----
     speechSupported: (typeof window!=='undefined' && 'speechSynthesis' in window),
     audioTested:false, audioTesting:false,
-    audioPlaying:false, audioDone:false, _speechToken:0,
+    audioPlaying:false, audioDone:false, speechToken:0,
     listened:{},            // respKey -> true once fully heard
 
     allProjects: (typeof v7Projects!=='undefined') ? v7Projects : [],
@@ -793,8 +793,9 @@ new Vue({
     testAudio(){
       if(!this.speechSupported){ this.audioTested=true; return; } // let them through; gate is off anyway
       var self=this; this.audioTesting=true;
-      this.speak('This is an audio test. In the study, you will hear the designer thinking out loud like this.', function(){
+      this.speak('This is an audio test. In the study, you will hear the designer thinking out loud like this.', function(ok){
         self.audioTesting=false; self.audioTested=true;
+        if(!ok){ self.speechSupported=false; } // no engine on this device -> disable gating
       });
     },
     speakCurrent(){
@@ -802,41 +803,74 @@ new Vue({
       if(!this.speechSupported || this.autoTesting){ this.audioDone=true; return; }
       var self=this, key=this.respKey;
       this.audioDone = !!this.listened[key];   // already fully heard before -> gate stays open
-      this.speak(this.fullText, function(){ self.audioDone=true; self.$set(self.listened, key, true); });
+      this.speak(this.fullText, function(ok){
+        self.audioDone=true;
+        if(ok){ self.$set(self.listened, key, true); }
+        else { self.speechSupported=false; }   // engine died -> stop gating for the rest of the study
+      });
+    },
+    // Load voices (async in Chrome). cb(voices) once available or after timeout.
+    _getVoices(cb){
+      var synth=window.speechSynthesis;
+      var v=synth.getVoices();
+      if(v && v.length){ cb(v); return; }
+      var done=false;
+      var t=setTimeout(function(){ if(!done){ done=true; cb(synth.getVoices()||[]); } }, 1200);
+      synth.onvoiceschanged=function(){ if(!done){ done=true; clearTimeout(t); cb(synth.getVoices()||[]); } };
     },
     speak(text, onEnd){
-      if(!this.speechSupported){ if(onEnd) onEnd(); return; }
+      if(!this.speechSupported){ if(onEnd) onEnd(false); return; }
       var synth=window.speechSynthesis;
-      synth.cancel();
-      var token=++this._speechToken;
+      var token=++this.speechToken;
       var self=this;
-      // chunk by sentence: long utterances can get cut off in some browsers
-      var parts=String(text).match(/[^.!?…]+[.!?…]+["']?|[^.!?…]+$/g) || [String(text)];
-      var idx=0;
+      synth.cancel();
+      this._utterances=[];                     // hold refs: Chrome GC-collects utterances otherwise (silent failure)
       this.audioPlaying=true;
-      // pick a stable English voice if available
-      var voices=synth.getVoices();
-      var voice=null;
-      for(var i=0;i<voices.length;i++){
-        var v=voices[i];
-        if(/en[-_]US/i.test(v.lang) && /Google|Samantha|Microsoft/i.test(v.name)){ voice=v; break; }
-      }
-      if(!voice){ for(var j=0;j<voices.length;j++){ if(/^en/i.test(voices[j].lang)){ voice=voices[j]; break; } } }
-      function next(){
-        if(token!==self._speechToken){ return; }           // superseded by a newer speak()
-        if(idx>=parts.length){ self.audioPlaying=false; if(onEnd) onEnd(); return; }
-        var u=new SpeechSynthesisUtterance(parts[idx++].trim());
-        if(voice) u.voice=voice;
-        u.rate=1.02; u.pitch=1.0;
-        u.onend=next;
-        u.onerror=function(){ next(); };                     // skip a bad chunk, keep going
-        synth.speak(u);
-      }
-      next();
+      var parts=String(text).match(/[^.!?…]+[.!?…]+["']?|[^.!?…]+$/g) || [String(text)];
+      var idx=0, anyStarted=false;
+
+      this._getVoices(function(voices){
+        if(token!==self.speechToken) return;
+        var voice=null;
+        for(var i=0;i<voices.length;i++){
+          var v=voices[i];
+          if(/en[-_]US/i.test(v.lang) && /Google|Samantha|Microsoft|Zira|Aria|Jenny/i.test(v.name)){ voice=v; break; }
+        }
+        if(!voice){ for(var j=0;j<voices.length;j++){ if(/^en/i.test(voices[j].lang)){ voice=voices[j]; break; } } }
+
+        function next(){
+          if(token!==self.speechToken){ return; }         // superseded
+          if(idx>=parts.length){ self.audioPlaying=false; if(onEnd) onEnd(true); return; }
+          var u=new SpeechSynthesisUtterance(parts[idx++].trim());
+          self._utterances.push(u);                        // keep alive
+          if(voice) u.voice=voice;
+          u.lang=(voice&&voice.lang)||'en-US';
+          u.rate=1.0; u.pitch=1.0; u.volume=1.0;
+          u.onstart=function(){ anyStarted=true; };
+          u.onend=next;
+          u.onerror=function(){ next(); };                 // skip bad chunk
+          synth.speak(u);
+        }
+        // watchdog FIRST: if no utterance has actually STARTED within 5s, the engine is dead/stuck
+        setTimeout(function(){
+          if(token!==self.speechToken) return;
+          if(!anyStarted){
+            self.speechToken++;             // invalidate pending callbacks
+            try{ synth.cancel(); }catch(e){}
+            self.audioPlaying=false;
+            if(onEnd) onEnd(false);
+          }
+        }, 5000);
+        // Chrome quirk: give cancel() a beat before speaking
+        setTimeout(function(){
+          if(token!==self.speechToken) return;
+          try{ next(); }catch(e){ /* watchdog will handle it */ }
+        }, 150);
+      });
     },
     stopSpeech(){
-      this._speechToken++;
-      if(this.speechSupported) window.speechSynthesis.cancel();
+      this.speechToken++;
+      if('speechSynthesis' in window) window.speechSynthesis.cancel();
       this.audioPlaying=false;
     },
     // ---- submit ----
